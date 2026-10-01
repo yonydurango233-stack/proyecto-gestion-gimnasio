@@ -21,7 +21,7 @@ class EntradaDiaria(models.Model):
         ('efectivo', 'Efectivo'),
         ('transferencia', 'Transferencia'),
     ]
-
+#Comen tario
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT)
     empleado = models.ForeignKey(Empleado, on_delete=models.PROTECT)
     tipo_entrada = models.ForeignKey(TipoEntrada, on_delete=models.PROTECT)
