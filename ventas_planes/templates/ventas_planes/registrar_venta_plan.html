@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block content %}
+<h2>Registrar Venta de Plan</h2>
+
+<div id="paso-datos">
+    <form id="form-datos">
+        {{ form.as_p }}
+        <button type="button" id="btn-ver-plan">Ver último plan</button>
+        <p id="resultado-plan"></p>
+        <button type="button" id="btn-ir-pago">Continuar al pago</button>
+    </form>
+</div>
+
+<div id="paso-pago" style="display:none; max-width:420px;">
+    <button type="button" id="btn-volver-datos" style="margin-bottom:14px;">&larr; Volver</button>
+    <div style="background:#f5f5f5; border-radius:10px; padding:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:16px;">
+            <span>Total a cobrar</span>
+            <span id="total-pago" style="font-size:20px; font-weight:bold;">$0</span>
+        </div>
+
+        <div style="background:#fff; border-radius:8px; padding:10px; margin-bottom:8px;">
+            <p style="font-size:13px; font-weight:bold; margin:0 0 6px;">Método de pago 1</p>
+            <div style="display:flex; gap:8px;">
+                <select id="metodo_pago_1" style="flex:1; padding:6px;">
+                    <option value="efectivo">Efectivo</option>
+                    <option value="transferencia">Transferencia</option>
+                </select>
+                <input type="number" id="monto_1" style="width:110px; padding:6px;">
+            </div>
+        </div>
+
+        <div id="bloque-pago-2" style="background:#fff; border-radius:8px; padding:10px; margin-bottom:12px; display:none;">
+            <p style="font-size:13px; font-weight:bold; margin:0 0 6px;">Método de pago 2 (resto)</p>
+            <div style="display:flex; gap:8px;">
+                <select id="metodo_pago_2" style="flex:1; padding:6px;">
+                    <option value="transferencia">Transferencia</option>
+                    <option value="efectivo">Efectivo</option>
+                </select>
+                <input type="number" id="monto_2" style="width:110px; padding:6px;" disabled>
+            </div>
+        </div>
+
+        <button type="button" id="btn-confirmar-venta" style="width:100%; padding:8px;">TERMINAR VENTA</button>
+    </div>
+</div>
+
+<form id="form-final" method="post" style="display:none;">
+    {% csrf_token %}
+    <input type="hidden" name="cliente" id="input-cliente">
+    <input type="hidden" name="plan" id="input-plan">
+    <input type="hidden" name="fecha_inicio" id="input-fecha_inicio">
+    <input type="hidden" name="metodo_pago_1" id="input-metodo_pago_1">
+    <input type="hidden" name="monto_1" id="input-monto_1">
+    <input type="hidden" name="metodo_pago_2" id="input-metodo_pago_2">
+    <input type="hidden" name="monto_2" id="input-monto_2">
+</form>
+
+<script>
+    const precios = {{ planes_json|safe }};
+
+    document.getElementById('btn-ver-plan').addEventListener('click', function() {
+        const clienteId = document.getElementById('id_cliente').value;
+        const resultado = document.getElementById('resultado-plan');
+
+        if (!clienteId) {
+            resultado.textContent = 'Primero elegí un cliente.';
+            return;
+        }
+
+        fetch('/ventas-planes/ultimo-plan/' + clienteId + '/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.existe) {
+                    resultado.textContent = 'Último plan: ' + data.plan + ' — Inicio: ' + data.fecha_inicio + ' — Vence: ' + data.fecha_vencimiento;
+                } else {
+                    resultado.textContent = 'Este cliente no tiene planes anteriores.';
+                }
+            });
+    });
+
+    document.getElementById('btn-ir-pago').addEventListener('click', () => {
+        const clienteId = document.getElementById('id_cliente').value;
+        const planId = document.getElementById('id_plan').value;
+        const fechaInicio = document.getElementById('id_fecha_inicio').value;
+
+        if (!clienteId || !planId || !fechaInicio) {
+            alert('Completá cliente, plan y fecha de inicio.');
+            return;
+        }
+
+        const total = parseFloat(precios[planId]);
+        document.getElementById('total-pago').textContent = '$' + total.toLocaleString('es-CO');
+        document.getElementById('monto_1').value = total.toFixed(2);
+        document.getElementById('monto_1').dataset.total = total.toFixed(2);
+        document.getElementById('bloque-pago-2').style.display = 'none';
+
+        document.getElementById('paso-datos').style.display = 'none';
+        document.getElementById('paso-pago').style.display = 'block';
+    });
+
+    document.getElementById('btn-volver-datos').addEventListener('click', () => {
+        document.getElementById('paso-pago').style.display = 'none';
+        document.getElementById('paso-datos').style.display = 'block';
+    });
+
+    document.getElementById('monto_1').addEventListener('input', function () {
+        const total = parseFloat(this.dataset.total);
+        const monto1 = parseFloat(this.value) || 0;
+        const resto = total - monto1;
+        const bloque2 = document.getElementById('bloque-pago-2');
+
+        if (resto > 0.001) {
+            bloque2.style.display = 'block';
+            document.getElementById('monto_2').value = resto.toFixed(2);
+        } else {
+            bloque2.style.display = 'none';
+        }
+    });
+
+    document.getElementById('btn-confirmar-venta').addEventListener('click', () => {
+        document.getElementById('input-cliente').value = document.getElementById('id_cliente').value;
+        document.getElementById('input-plan').value = document.getElementById('id_plan').value;
+        document.getElementById('input-fecha_inicio').value = document.getElementById('id_fecha_inicio').value;
+        document.getElementById('input-metodo_pago_1').value = document.getElementById('metodo_pago_1').value;
+        document.getElementById('input-monto_1').value = document.getElementById('monto_1').value;
+
+        const bloque2Visible = document.getElementById('bloque-pago-2').style.display !== 'none';
+        if (bloque2Visible) {
+            document.getElementById('input-metodo_pago_2').value = document.getElementById('metodo_pago_2').value;
+            document.getElementById('input-monto_2').value = document.getElementById('monto_2').value;
+        }
+
+        document.getElementById('form-final').submit();
+    });
+</script>
+{% endblock %}

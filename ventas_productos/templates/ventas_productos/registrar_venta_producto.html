@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block content %}
+<h2>Registrar Venta de Producto</h2>
+
+<div id="paso-carrito">
+    <div style="display:flex; gap:20px; flex-wrap:wrap;">
+
+        <div style="flex:1.3; min-width:320px; background:#f5f5f5; border-radius:10px; padding:14px;">
+            <p style="font-weight:bold; margin:0 0 10px;">Productos</p>
+            <input type="text" id="buscador" placeholder="Buscar producto..." style="width:100%; padding:6px; margin-bottom:10px; box-sizing:border-box;">
+            <div id="grilla-productos" style="max-height:420px; overflow-y:auto; display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;"></div>
+        </div>
+
+        <div style="flex:1; min-width:280px; background:#f5f5f5; border-radius:10px; padding:14px;">
+            <p style="font-weight:bold; margin:0 0 10px;">Venta</p>
+            <label for="cliente_id">Cliente:</label><br>
+                        <select id="cliente_id" style="width:100%; padding:6px; margin-bottom:14px;">
+                {% for c in clientes %}
+                <option value="{{ c.id }}" {% if c.id == cliente_predeterminado_id %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+
+            <p style="font-weight:bold; margin:0 0 6px;">Carrito</p>
+            <div id="lista-carrito" style="display:flex; flex-direction:column; gap:6px; margin-bottom:12px; min-height:40px;">
+                <p id="carrito-vacio" style="color:#888; font-size:13px;">Todavía no agregaste productos.</p>
+            </div>
+
+            <div style="border-top:1px solid #ccc; padding-top:10px; display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <strong>Total</strong>
+                <strong id="total-carrito">$0</strong>
+            </div>
+            <button type="button" id="btn-ir-pago" style="width:100%; padding:8px;">Registrar Venta</button>
+        </div>
+
+    </div>
+</div>
+
+<div id="paso-pago" style="display:none; max-width:420px;">
+    <button type="button" id="btn-volver-carrito" style="margin-bottom:14px;">&larr; Volver al carrito</button>
+    <div style="background:#f5f5f5; border-radius:10px; padding:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:16px;">
+            <span>Total a cobrar</span>
+            <span id="total-pago" style="font-size:20px; font-weight:bold;">$0</span>
+        </div>
+
+        <div style="background:#fff; border-radius:8px; padding:10px; margin-bottom:8px;">
+            <p style="font-size:13px; font-weight:bold; margin:0 0 6px;">Método de pago 1</p>
+            <div style="display:flex; gap:8px;">
+                <select id="metodo_pago_1" style="flex:1; padding:6px;">
+                    <option value="efectivo">Efectivo</option>
+                    <option value="transferencia">Transferencia</option>
+                </select>
+                <input type="number" id="monto_1" style="width:110px; padding:6px;">
+            </div>
+        </div>
+
+        <div id="bloque-pago-2" style="background:#fff; border-radius:8px; padding:10px; margin-bottom:12px; display:none;">
+            <p style="font-size:13px; font-weight:bold; margin:0 0 6px;">Método de pago 2 (resto)</p>
+            <div style="display:flex; gap:8px;">
+                <select id="metodo_pago_2" style="flex:1; padding:6px;">
+                    <option value="transferencia">Transferencia</option>
+                    <option value="efectivo">Efectivo</option>
+                </select>
+                <input type="number" id="monto_2" style="width:110px; padding:6px;" disabled>
+            </div>
+        </div>
+
+        <button type="button" id="btn-confirmar-venta" style="width:100%; padding:8px;">Confirmar Venta</button>
+    </div>
+</div>
+
+<form id="form-venta" method="post" style="display:none;">
+    {% csrf_token %}
+    <input type="hidden" name="cliente_id" id="input-cliente_id">
+    <input type="hidden" name="carrito_json" id="input-carrito_json">
+    <input type="hidden" name="metodo_pago_1" id="input-metodo_pago_1">
+    <input type="hidden" name="monto_1" id="input-monto_1">
+    <input type="hidden" name="metodo_pago_2" id="input-metodo_pago_2">
+    <input type="hidden" name="monto_2" id="input-monto_2">
+</form>
+
+<script>
+    const productos = {{ productos_json|safe }};
+    const iconosCategoria = {
+        'hidratacion': '💧',
+        'suplementos': '💊',
+        'ropa': '👕',
+        'accesorios': '🎒',
+    };
+
+    let carrito = {};
+
+    function pintarGrilla(filtro) {
+        const grilla = document.getElementById('grilla-productos');
+        grilla.innerHTML = '';
+        const texto = (filtro || '').toLowerCase();
+
+        productos
+            .filter(p => p.nombre.toLowerCase().includes(texto))
+            .forEach(p => {
+                const div = document.createElement('div');
+                div.style.cssText = 'display:flex; align-items:center; gap:6px; background:#fff; border:1px solid #ddd; border-radius:8px; padding:8px; cursor:pointer;';
+                            const miniatura = p.imagen
+                ? `<img src="${p.imagen}" style="width:32px; height:32px; flex-shrink:0; border-radius:6px; object-fit:cover;">`
+                : `<div style="width:32px; height:32px; flex-shrink:0; background:#eee; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:16px;">${iconosCategoria[p.categoria] || '📦'}</div>`;
+
+            div.innerHTML = `
+                ${miniatura}
+                <div style="min-width:0;">
+                    <p style="margin:0; font-size:12px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.nombre}</p>
+                    <p style="margin:2px 0 0; font-size:11px; color:#555;">$${Number(p.precio).toLocaleString('es-CO')}</p>
+                </div>
+            `;
+                div.addEventListener('click', () => agregarAlCarrito(p));
+                grilla.appendChild(div);
+            });
+    }
+
+    function agregarAlCarrito(producto) {
+        if (carrito[producto.id]) {
+            carrito[producto.id].cantidad += 1;
+        } else {
+            carrito[producto.id] = {
+                producto_id: producto.id,
+                nombre: producto.nombre,
+                precio: parseFloat(producto.precio),
+                cantidad: 1,
+            };
+        }
+        pintarCarrito();
+    }
+
+    function cambiarCantidad(id, delta) {
+        if (!carrito[id]) return;
+        carrito[id].cantidad += delta;
+        if (carrito[id].cantidad <= 0) {
+            delete carrito[id];
+        }
+        pintarCarrito();
+    }
+
+    function pintarCarrito() {
+        const lista = document.getElementById('lista-carrito');
+        const items = Object.values(carrito);
+        lista.innerHTML = '';
+
+        if (items.length === 0) {
+            lista.innerHTML = '<p id="carrito-vacio" style="color:#888; font-size:13px;">Todavía no agregaste productos.</p>';
+        }
+
+        let total = 0;
+        items.forEach(item => {
+            const subtotal = item.precio * item.cantidad;
+            total += subtotal;
+
+            const div = document.createElement('div');
+            div.style.cssText = 'display:flex; justify-content:space-between; align-items:center; background:#fff; border-radius:8px; padding:8px 10px;';
+            div.innerHTML = `
+                <div>
+                    <p style="margin:0; font-size:13px; font-weight:bold;">${item.nombre}</p>
+                    <p style="margin:2px 0 0; font-size:11px; color:#555;">$${item.precio.toLocaleString('es-CO')} c/u</p>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="display:flex; align-items:center; gap:6px; border:1px solid #ccc; border-radius:6px; padding:0 4px;">
+                        <button type="button" data-id="${item.producto_id}" data-delta="-1" class="btn-cantidad" style="border:none; background:none; cursor:pointer;">-</button>
+                        <span style="min-width:14px; text-align:center; font-size:12px;">${item.cantidad}</span>
+                        <button type="button" data-id="${item.producto_id}" data-delta="1" class="btn-cantidad" style="border:none; background:none; cursor:pointer;">+</button>
+                    </div>
+                    <span style="font-size:13px; font-weight:bold; min-width:55px; text-align:right;">$${subtotal.toLocaleString('es-CO')}</span>
+                </div>
+            `;
+            lista.appendChild(div);
+        });
+
+        document.querySelectorAll('.btn-cantidad').forEach(btn => {
+            btn.addEventListener('click', () => cambiarCantidad(btn.dataset.id, parseInt(btn.dataset.delta)));
+        });
+
+        document.getElementById('total-carrito').textContent = '$' + total.toLocaleString('es-CO');
+    }
+
+    document.getElementById('buscador').addEventListener('input', e => pintarGrilla(e.target.value));
+
+    document.getElementById('btn-ir-pago').addEventListener('click', () => {
+        if (Object.keys(carrito).length === 0) {
+            alert('Agregá al menos un producto al carrito.');
+            return;
+        }
+        const total = Object.values(carrito).reduce((acc, i) => acc + i.precio * i.cantidad, 0);
+        document.getElementById('total-pago').textContent = '$' + total.toLocaleString('es-CO');
+        document.getElementById('monto_1').value = total.toFixed(2);
+        document.getElementById('monto_1').dataset.total = total.toFixed(2);
+        document.getElementById('bloque-pago-2').style.display = 'none';
+        document.getElementById('paso-carrito').style.display = 'none';
+        document.getElementById('paso-pago').style.display = 'block';
+    });
+
+    document.getElementById('btn-volver-carrito').addEventListener('click', () => {
+        document.getElementById('paso-pago').style.display = 'none';
+        document.getElementById('paso-carrito').style.display = 'block';
+    });
+
+    document.getElementById('monto_1').addEventListener('input', function () {
+        const total = parseFloat(this.dataset.total);
+        const monto1 = parseFloat(this.value) || 0;
+        const resto = total - monto1;
+        const bloque2 = document.getElementById('bloque-pago-2');
+
+        if (resto > 0.001) {
+            bloque2.style.display = 'block';
+            document.getElementById('monto_2').value = resto.toFixed(2);
+        } else {
+            bloque2.style.display = 'none';
+        }
+    });
+
+    document.getElementById('btn-confirmar-venta').addEventListener('click', () => {
+        const clienteId = document.getElementById('cliente_id').value;
+        const carritoArray = Object.values(carrito).map(i => ({ producto_id: parseInt(i.producto_id), cantidad: i.cantidad }));
+
+        document.getElementById('input-cliente_id').value = clienteId;
+        document.getElementById('input-carrito_json').value = JSON.stringify(carritoArray);
+        document.getElementById('input-metodo_pago_1').value = document.getElementById('metodo_pago_1').value;
+        document.getElementById('input-monto_1').value = document.getElementById('monto_1').value;
+
+        const bloque2Visible = document.getElementById('bloque-pago-2').style.display !== 'none';
+        if (bloque2Visible) {
+            document.getElementById('input-metodo_pago_2').value = document.getElementById('metodo_pago_2').value;
+            document.getElementById('input-monto_2').value = document.getElementById('monto_2').value;
+        }
+
+        document.getElementById('form-venta').submit();
+    });
+
+    pintarGrilla('');
+</script>
+{% endblock %}

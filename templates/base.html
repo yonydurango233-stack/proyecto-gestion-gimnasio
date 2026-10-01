@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gimnasio</title>
+</head>
+<body>
+    {% if user.is_authenticated %}
+    <nav>
+        <span>Hola, {{ user.username }}</span> |
+        <a href="{% url 'inicio' %}">Inicio</a> |
+        <a href="{% url 'registrar_entrada' %}">Registrar Entrada</a> |
+        <a href="{% url 'registrar_venta_plan' %}">Venta de Plan</a> |
+        <a href="{% url 'registrar_venta_producto' %}">Venta de Producto</a> |
+        <a href="{% url 'registrar_egreso' %}">Registrar Egreso</a> |
+        <a href="{% url 'reporte_ventas' %}">Reporte de Ventas</a> |
+        <a href="{% url 'caja' %}">Caja</a> |
+        <a href="{% url 'listar_planes' %}">Planes</a> |
+        <form action="{% url 'logout' %}" method="post" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit">Cerrar sesión</button>
+        </form>
+    </nav>
+    <hr>
+    {% endif %}
+    {% if messages %}
+    <ul>
+    {% for message in messages %}
+        <li>{{ message }}</li>
+    {% endfor %}
+    </ul>
+    {% endif %}
+    {% block content %}
+    {% endblock %}
+</body>
+</html>

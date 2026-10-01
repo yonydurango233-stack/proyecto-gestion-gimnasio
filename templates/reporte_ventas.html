@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load formato %}
+{% block content %}
+<h2>Reporte de Ventas</h2>
+
+<form method="get">
+    <label for="fecha_desde">Desde:</label>
+    <input type="date" name="fecha_desde" id="fecha_desde" value="{{ fecha_desde|date:'Y-m-d' }}">
+
+    <label for="fecha_hasta">Hasta:</label>
+    <input type="date" name="fecha_hasta" id="fecha_hasta" value="{{ fecha_hasta|date:'Y-m-d' }}">
+
+    <label for="modulo">Módulo:</label>
+    <select name="modulo" id="modulo">
+        <option value="todos" {% if modulo == 'todos' %}selected{% endif %}>Todos</option>
+        <option value="planes" {% if modulo == 'planes' %}selected{% endif %}>Planes</option>
+        <option value="entradas" {% if modulo == 'entradas' %}selected{% endif %}>Entradas Diarias</option>
+        <option value="productos" {% if modulo == 'productos' %}selected{% endif %}>Productos</option>
+    </select>
+
+    <button type="submit">Filtrar</button>
+</form>
+
+<h3>Totales</h3>
+<p>Efectivo: ${{ total_efectivo|moneda }}</p>
+<p>Transferencia: ${{ total_transferencia|moneda }}</p>
+<p><strong>Total ventas: ${{ total_ventas|moneda }}</strong></p>
+
+<h3>Movimientos</h3>
+<table border="1" cellpadding="5">
+    <tr>
+        <th>Módulo</th>
+        <th>Cliente</th>
+        <th>Detalle</th>
+        <th>Método de pago</th>
+        <th>Total</th>
+        <th>Fecha</th>
+        <th></th>        
+    </tr>
+    {% for m in movimientos %}
+    <tr>
+        <td>{{ m.modulo }} (#{{ m.id }})</td>
+        <td>{{ m.cliente }}</td>
+        <td>{{ m.detalle }}</td>
+        <td>
+            {% for p in m.pagos %}
+            ${{ p.monto|moneda }} ({{ p.metodo }})<br>
+            {% endfor %}
+        </td>
+        <td>${{ m.total|moneda }}</td>
+        <td>{{ m.fecha|date:"d/m/Y H:i" }}</td>
+        <td><a href="{% url 'ticket_detalle' m.modulo_url m.id %}">Ver ticket</a></td>        
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="6">No hay movimientos para esta fecha/filtro.</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

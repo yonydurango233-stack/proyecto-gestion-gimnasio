@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load formato %}
+{% block content %}
+<h2>Ticket #{{ id }}</h2>
+<p>{{ fecha|date:"d/m/Y H:i" }} · {{ cliente }}</p>
+
+<table border="1" cellpadding="5">
+    <tr>
+        <th>Producto</th>
+        <th>Cantidad</th>
+        <th>Subtotal</th>
+    </tr>
+    {% for item in items %}
+    <tr>
+        <td>{{ item.nombre }}</td>
+        <td>{{ item.cantidad }}</td>
+        <td>${{ item.subtotal|moneda }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<h3>Pago</h3>
+{% for p in pagos %}
+<p>${{ p.monto|moneda }} ({{ p.metodo }})</p>
+{% endfor %}
+
+<p><strong>Total: ${{ total|moneda }}</strong></p>
+
+<a href="{% url 'reporte_ventas' %}">&larr; Volver al reporte</a>
+{% endblock %}

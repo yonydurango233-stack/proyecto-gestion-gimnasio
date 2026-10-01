@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% load formato %}
+{% block content %}
+<h2>Planes</h2>
+
+<a href="{% url 'crear_plan' %}">+ Crear nuevo plan</a>
+
+<table border="1" cellpadding="5" style="margin-top:10px;">
+    <tr>
+        <th>Nombre</th>
+        <th>Precio</th>
+        <th>Tipo</th>
+        <th>Duración</th>
+        <th>Activo</th>
+        <th></th>
+    </tr>
+    {% for plan in planes %}
+    <tr>
+        <td>{{ plan.nombre }}</td>
+        <td>${{ plan.precio|moneda }}</td>
+        <td>{{ plan.get_tipo_plan_display }}</td>
+        <td>{{ plan.duracion }} {{ plan.get_unidad_duracion_display }}</td>
+        <td>{% if plan.esta_vigente %}Sí{% else %}No{% endif %}</td>
+        <td><a href="{% url 'editar_plan' plan.id %}">Editar</a></td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="6">No hay planes registrados.</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

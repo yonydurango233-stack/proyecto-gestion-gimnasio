@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% load formato %}
+{% block content %}
+
+<form method="get">
+    <label for="fecha_desde">Desde:</label>
+    <input type="date" name="fecha_desde" id="fecha_desde" value="{{ fecha_desde|date:'Y-m-d' }}">
+
+    <label for="fecha_hasta">Hasta:</label>
+    <input type="date" name="fecha_hasta" id="fecha_hasta" value="{{ fecha_hasta|date:'Y-m-d' }}">
+
+    <button type="submit">Filtrar</button>
+</form>
+
+<h3>Ingresos</h3>
+<p>Efectivo: ${{ ingresos_efectivo|moneda }}</p>
+<p>Transferencia: ${{ ingresos_transferencia|moneda }}</p>
+<p><strong>Total ingresos: ${{ total_ingresos|moneda }}</strong></p>
+
+<h3>Egresos</h3>
+<p>Efectivo: ${{ egresos_efectivo|moneda }}</p>
+<p>Transferencia: ${{ egresos_transferencia|moneda }}</p>
+<p><strong>Total egresos: ${{ total_egresos|moneda }}</strong></p>
+
+<h3>Neto (lo que debería quedar en caja)</h3>
+<p>Efectivo: ${{ neto_efectivo|moneda }}</p>
+<p>Transferencia: ${{ neto_transferencia|moneda }}</p>
+<p><strong>Total neto: ${{ neto_total|moneda }}</strong></p>
+{% endblock %}
